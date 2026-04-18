@@ -1,0 +1,727 @@
+<!doctype html>
+
+<html lang="zh-TW">
+  <head>
+    <meta charset="UTF-8" />
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <title>溝通訓練遊戲</title>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <style>
+      @keyframes popIn {
+        0% {
+          transform: scale(0.8);
+          opacity: 0;
+        }
+
+        100% {
+          transform: scale(1);
+          opacity: 1;
+        }
+      }
+
+      .animate-pop {
+        animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+      }
+
+      @keyframes pulse {
+        0% {
+          transform: scale(1);
+          box-shadow: 0 0 0 0 rgba(99, 102, 241, 0.7);
+        }
+
+        70% {
+          transform: scale(1.1);
+          box-shadow: 0 0 0 15px rgba(99, 102, 241, 0);
+        }
+
+        100% {
+          transform: scale(1);
+          box-shadow: 0 0 0 0 rgba(99, 102, 241, 0);
+        }
+      }
+
+      .pulse-animation {
+        animation: pulse 1.5s infinite;
+      }
+
+      .highlight-word {
+        color: #4f46e5;
+
+        font-weight: 900;
+
+        font-size: 1.2em;
+
+        background-color: #e0e7ff;
+
+        padding: 0.1em 0.3em;
+
+        border-radius: 0.3em;
+
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      }
+    </style>
+  </head>
+
+  <body
+    class="bg-sky-50 min-h-screen font-sans text-slate-800 flex justify-center p-4"
+  >
+    <main
+      class="w-full max-w-lg bg-white rounded-3xl shadow-xl overflow-hidden flex flex-col relative mt-4"
+    >
+      <!-- 開始畫面 -->
+
+      <div
+        id="start-screen"
+        class="absolute inset-0 bg-white p-8 flex flex-col items-center justify-center z-30 text-center"
+      >
+        <div class="text-8xl mb-4">🎮</div>
+
+        <h1 class="text-3xl font-bold text-indigo-600 mb-4">溝通訓練遊戲</h1>
+
+        <p class="text-slate-500 text-lg mb-4">
+          準備好要開始挑戰了嗎？<br />記得打開喇叭跟麥克風喔！
+        </p>
+
+        <div
+          class="bg-amber-50 border border-amber-200 rounded-xl p-3 mb-8 w-full"
+        >
+          <p class="text-amber-700 text-sm font-bold">
+            ⚠️ 注意：請勿使用「無痕/私密模式」
+          </p>
+
+          <p class="text-amber-600 text-xs mt-1">
+            手機無痕模式會強制阻擋麥克風，導致無法遊玩
+          </p>
+        </div>
+
+        <button
+          onclick="fetchDataAndStart()"
+          class="bg-indigo-500 hover:bg-indigo-600 text-white font-bold py-4 px-10 rounded-full shadow-lg transition-transform active:scale-95 text-xl"
+        >
+          開始遊戲 ▶
+        </button>
+      </div>
+
+      <div
+        id="loading-screen"
+        class="hidden absolute inset-0 bg-white p-8 flex flex-col items-center justify-center z-30 text-center"
+      >
+        <div
+          class="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-indigo-500 mb-4"
+        ></div>
+
+        <h2 class="text-xl font-bold text-indigo-600">讀取題庫中，請稍候...</h2>
+      </div>
+
+      <header
+        class="bg-indigo-500 text-white p-4 flex justify-between items-center z-0"
+      >
+        <h1 class="text-xl font-bold tracking-wider">🌟 語音小學堂</h1>
+
+        <div class="bg-indigo-700 px-3 py-1 rounded-full text-sm font-medium">
+          第 <span id="progress-text">1/10</span> 題
+        </div>
+      </header>
+
+      <div class="w-full bg-slate-200 h-2 z-0">
+        <div
+          id="progress-bar"
+          class="bg-amber-400 h-2 transition-all duration-300 w-0%"
+        ></div>
+      </div>
+
+      <div id="game-area" class="p-6 flex-1 flex flex-col items-center hidden">
+        <h2
+          id="question-title"
+          class="text-indigo-600 text-xl font-bold mb-4 text-center"
+        >
+          題目載入中...
+        </h2>
+
+        <div
+          id="question-display"
+          class="w-48 h-48 bg-slate-50 rounded-2xl flex items-center justify-center mb-8 shadow-inner border-2 border-slate-200 transition-colors overflow-hidden p-2"
+        ></div>
+
+        <div id="options-container" class="w-full"></div>
+      </div>
+
+      <div
+        id="result-screen"
+        class="hidden absolute inset-0 bg-white p-8 flex flex-col items-center justify-center z-10 text-center"
+      >
+        <div class="text-8xl mb-4">🏆</div>
+
+        <h2 class="text-3xl font-bold text-indigo-600 mb-2">太棒了！</h2>
+
+        <p class="text-slate-500 text-lg mb-8">你完成了所有挑戰</p>
+
+        <div class="text-2xl font-bold text-amber-500 mb-8">
+          分數：<span id="final-score">100</span> 分
+        </div>
+
+        <button
+          onclick="location.reload()"
+          class="bg-indigo-500 hover:bg-indigo-600 text-white font-bold py-3 px-8 rounded-full shadow-lg transition-transform active:scale-95 text-lg"
+        >
+          再玩一次
+        </button>
+      </div>
+
+      <!-- 答對後的延伸例句彈窗 -->
+
+      <div
+        id="modal-overlay"
+        class="hidden absolute inset-0 bg-black/60 flex items-center justify-center p-4 z-20 backdrop-blur-sm"
+      >
+        <div
+          class="bg-white w-full max-h-screen overflow-y-auto rounded-3xl p-6 text-center animate-pop shadow-2xl border-4 border-emerald-400"
+        >
+          <h3 class="text-2xl font-bold text-emerald-500 mb-3">
+            ✨ 答對了！說說看：
+          </h3>
+
+          <div
+            class="bg-emerald-50 text-emerald-800 p-4 rounded-xl text-lg font-medium mb-4 border border-emerald-100 flex flex-col items-center"
+          >
+            <img
+              id="modal-sentence-img"
+              src=""
+              class="w-full h-40 object-contain rounded-lg bg-white mb-4 border border-emerald-200 p-2 shadow-sm"
+              alt="情境圖片"
+            />
+
+            <div class="w-full text-center leading-relaxed">
+              <span id="modal-sentence" class="text-xl text-slate-700"></span>
+            </div>
+          </div>
+
+          <div class="flex flex-col items-center justify-center mb-2">
+            <button
+              id="modal-mic-btn"
+              onclick="startRecognition('sentence')"
+              class="w-16 h-16 bg-indigo-500 rounded-full flex items-center justify-center text-white shadow-lg hover:bg-indigo-600 transition-all mb-2 mt-2"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="32"
+                height="32"
+                fill="currentColor"
+                viewBox="0 0 256 256"
+              >
+                <path
+                  d="M128,176a48.05,48.05,0,0,0,48-48V64a48,48,0,0,0-96,0v64A48.05,48.05,0,0,0,128,176ZM96,64a32,32,0,0,1,64,0v64a32,32,0,0,1-64,0ZM216,128a8,8,0,0,1-16,0,72.08,72.08,0,0,1-144,0,8,8,0,0,1-16,0,88.1,88.1,0,0,0,80,87.66V240a8,8,0,0,0,16,0V215.66A88.1,88.1,0,0,0,216,128Z"
+                ></path>
+              </svg>
+            </button>
+
+            <p id="modal-mic-status" class="text-sm font-medium text-slate-500">
+              點擊麥克風，念出上方的句子
+            </p>
+
+            <p
+              id="modal-transcript"
+              class="text-indigo-600 font-bold mt-2 min-h-[24px]"
+            ></p>
+          </div>
+
+          <button
+            id="modal-next-btn"
+            onclick="nextQuestion()"
+            class="hidden w-full bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-3 rounded-full shadow-md transition-transform active:scale-95 text-lg mt-2"
+          >
+            太棒了！下一題 ➔
+          </button>
+
+          <button
+            onclick="nextQuestion()"
+            class="mt-3 text-sm text-slate-400 underline"
+          >
+            念不出來？跳過
+          </button>
+        </div>
+      </div>
+    </main>
+
+    <script>
+      let database = [];
+
+      let currentQuestions = [];
+
+      let currentIndex = 0;
+
+      let score = 0;
+
+      let currentCorrectAnswer = {};
+
+      let currentSpeechMode = "none";
+
+      let isRecognizing = false;
+
+      const SpeechRecognition =
+        window.SpeechRecognition || window.webkitSpeechRecognition;
+
+      const recognition = SpeechRecognition ? new SpeechRecognition() : null;
+
+      if (recognition) {
+        recognition.lang = "cmn-Hant-TW";
+
+        recognition.interimResults = false;
+
+        recognition.maxAlternatives = 1;
+
+        recognition.onstart = () => {
+          isRecognizing = true;
+        };
+
+        recognition.onresult = (event) => {
+          const transcript = event.results[0][0].transcript;
+
+          const cleanTranscript = transcript.replace(/[，。！？、\s]/g, "");
+
+          if (currentSpeechMode === "word") {
+            const qTranscript = document.getElementById("q-transcript");
+
+            const qMicStatus = document.getElementById("q-mic-status");
+
+            qTranscript.innerText = `「${transcript}」`;
+
+            const cleanTarget = currentCorrectAnswer.word;
+
+            if (cleanTranscript.includes(cleanTarget)) {
+              qMicStatus.innerText = "太棒了！答對了 ✨";
+
+              qMicStatus.className = "text-sm font-bold text-emerald-600";
+
+              score += 10;
+
+              setTimeout(() => showSentenceModal(), 1000);
+            } else {
+              qMicStatus.innerText = "好像不對喔，再試一次！";
+
+              qMicStatus.className = "text-sm font-medium text-red-500";
+            }
+          } else if (currentSpeechMode === "sentence") {
+            const modalTranscript = document.getElementById("modal-transcript");
+
+            const modalMicStatus = document.getElementById("modal-mic-status");
+
+            const modalMicBtn = document.getElementById("modal-mic-btn");
+
+            const nextBtn = document.getElementById("modal-next-btn");
+
+            modalTranscript.innerText = `「${transcript}」`;
+
+            const cleanTarget = currentCorrectAnswer.sentence.replace(
+              /[，。！？、\s]/g,
+              "",
+            );
+
+            if (
+              cleanTranscript.includes(cleanTarget) ||
+              (cleanTarget.includes(cleanTranscript) &&
+                cleanTranscript.length >= cleanTarget.length * 0.5)
+            ) {
+              modalMicStatus.innerText = "太棒了！念得很標準 ✨";
+
+              modalMicStatus.className = "text-sm font-bold text-emerald-600";
+
+              modalMicBtn.classList.add("hidden");
+
+              nextBtn.classList.remove("hidden");
+            } else {
+              modalMicStatus.innerText = "好像不太一樣喔，再試一次！";
+
+              modalMicStatus.className = "text-sm font-medium text-red-500";
+            }
+          }
+        };
+
+        recognition.onend = () => {
+          isRecognizing = false;
+
+          stopPulseAnimation();
+        };
+
+        recognition.onerror = (event) => {
+          stopPulseAnimation();
+
+          isRecognizing = false;
+
+          const statusId =
+            currentSpeechMode === "word" ? "q-mic-status" : "modal-mic-status";
+
+          const statusEl = document.getElementById(statusId);
+
+          let errorMsg = "沒聽清楚，請再點擊重試";
+
+          if (event.error === "not-allowed") {
+            errorMsg = "權限被阻擋 ❌ 請確認未開啟無痕模式，並允許麥克風";
+          } else if (event.error === "audio-capture") {
+            errorMsg = "找不到麥克風 😢 可能被系統或無痕模式強制關閉";
+          } else if (event.error === "no-speech") {
+            errorMsg = "沒有聽到聲音，請靠近麥克風再說一次";
+          } else {
+            errorMsg = `發生錯誤 (${event.error})，請重試`;
+          }
+
+          statusEl.innerText = errorMsg;
+
+          statusEl.className = "text-sm font-bold text-red-500";
+        };
+      }
+
+      function shuffle(array) {
+        return array.sort(() => Math.random() - 0.5);
+      }
+
+      async function fetchDataAndStart() {
+        document.getElementById("start-screen").classList.add("hidden");
+        document.getElementById("loading-screen").classList.remove("hidden");
+
+        // 替換成你剛剛在 GAS 部署後拿到的網址
+        const apiUrl = "https://script.google.com/macros/s/AKfycbzRbDUBWDknxqI8mSDPzDPyhw70YyYyhMnav9IE3ZkmR0jHM_-MQW92-7c_VENSNvP8Zw/exec";
+
+        try {
+          const response = await fetch(apiUrl);
+
+          if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+          }
+
+          const data = await response.json();
+
+          document.getElementById("loading-screen").classList.add("hidden");
+
+          if (data.length < 4) {
+            alert(
+              "題庫資料不足！請在試算表中至少建立 4 筆包含圖片網址的資料。",
+            );
+            location.reload();
+            return;
+          }
+
+          database = data;
+          startGameLogic();
+        } catch (error) {
+          console.error("Fetch data failed:", error);
+          document.getElementById("loading-screen").classList.add("hidden");
+          alert("無法讀取試算表資料，請確認網路連線或 API 網址是否正確。");
+          // 這裡可以選擇是否要在失敗時載入備用假資料 (database = [...])
+          location.reload();
+        }
+      }
+
+      function startGameLogic() {
+        const shuffledDB = shuffle([...database]);
+
+        const totalQuestions = Math.min(10, database.length);
+
+        currentQuestions = shuffledDB.slice(0, totalQuestions);
+
+        currentIndex = 0;
+
+        score = 0;
+
+        document.getElementById("game-area").classList.remove("hidden");
+
+        loadQuestion();
+      }
+
+      function playQuestionAudio() {
+        window.speechSynthesis.cancel();
+
+        const utterance = new SpeechSynthesisUtterance(
+          currentCorrectAnswer.word,
+        );
+
+        utterance.lang = "zh-TW";
+
+        utterance.rate = 0.9;
+
+        window.speechSynthesis.speak(utterance);
+      }
+
+      // 核心工程優化：主動喚起權限，加入等待狀態
+
+      async function startRecognition(mode) {
+
+        if (!recognition) {
+          alert(
+            "您的瀏覽器暫不支援語音辨識功能，建議使用 Safari 或 Chrome 瀏覽器。",
+          );
+
+          return;
+        }
+
+        const btnId = mode === "word" ? "q-mic-btn" : "modal-mic-btn";
+
+        const statusId = mode === "word" ? "q-mic-status" : "modal-mic-status";
+
+        const transId = mode === "word" ? "q-transcript" : "modal-transcript";
+
+        const btnEl = document.getElementById(btnId);
+
+        const statusEl = document.getElementById(statusId);
+
+        const transEl = document.getElementById(transId);
+
+        // UX：提示畫面正在請求權限
+
+        statusEl.innerText = "請允許麥克風權限... 🎙️";
+
+        statusEl.className = "text-sm font-bold text-orange-500 animate-pulse";
+
+        transEl.innerText = "";
+
+        if (btnEl) btnEl.style.opacity = "0.6";
+
+        try {
+          // 強制喚起裝置的麥克風權限詢問視窗
+
+          const stream = await navigator.mediaDevices.getUserMedia({
+            audio: true,
+          });
+
+          stream.getTracks().forEach((track) => track.stop()); // 取得權限後立即釋放
+        } catch (err) {
+          console.warn("麥克風權限被拒絕或找不到設備", err);
+
+          statusEl.innerText = "麥克風權限未開啟 ❌ 請去設定中允許";
+
+          statusEl.className = "text-sm font-bold text-red-500";
+
+          if (btnEl) btnEl.style.opacity = "1";
+
+          return;
+        }
+
+        // 防止多次點擊
+
+        if (isRecognizing) {
+          try {
+            recognition.stop();
+          } catch (e) {}
+        }
+
+        currentSpeechMode = mode;
+
+        setTimeout(() => {
+          try {
+            recognition.start();
+
+            if (btnEl) {
+              btnEl.style.opacity = "1";
+
+              btnEl.classList.add("pulse-animation");
+            }
+
+            statusEl.innerText = "聆聽中...請大聲說話 👂";
+
+            statusEl.className = "text-sm font-bold text-blue-600";
+          } catch (e) {
+            console.warn("辨識引擎已在運行中");
+          }
+        }, 100);
+      }
+
+      function stopPulseAnimation() {
+        const qMic = document.getElementById("q-mic-btn");
+
+        const mMic = document.getElementById("modal-mic-btn");
+
+        if (qMic) {
+          qMic.classList.remove("pulse-animation");
+          qMic.style.opacity = "1";
+        }
+
+        if (mMic) {
+          mMic.classList.remove("pulse-animation");
+          mMic.style.opacity = "1";
+        }
+      }
+
+      function loadQuestion() {
+        const q = currentQuestions[currentIndex];
+
+        currentCorrectAnswer = q;
+
+        const totalQ = currentQuestions.length;
+
+        document.getElementById("progress-text").innerText =
+          `${currentIndex + 1}/${totalQ}`;
+
+        document.getElementById("progress-bar").style.width =
+          `${(currentIndex / totalQ) * 100}%`;
+
+        const questionType = Math.floor(Math.random() * 2);
+
+        const qDisplay = document.getElementById("question-display");
+
+        const qTitle = document.getElementById("question-title");
+
+        const optionsContainer = document.getElementById("options-container");
+
+        if (questionType === 0) {
+          qTitle.innerText = "🔊 請聽語音，選出正確的圖片";
+
+          qDisplay.className =
+            "w-40 h-40 bg-indigo-50 text-indigo-500 rounded-full flex items-center justify-center mb-8 shadow-lg border-4 border-indigo-200 hover:bg-indigo-100 hover:scale-105 transition-all cursor-pointer";
+
+          qDisplay.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" fill="currentColor" viewBox="0 0 256 256"><path d="M155.51,24.81a8,8,0,0,0-8.42.88L77.25,80H32A16,16,0,0,0,16,96v64a16,16,0,0,0,16,16H77.25l69.84,54.31A8,8,0,0,0,160,224V32A8,8,0,0,0,155.51,24.81ZM144,207.64,84.08,161a8,8,0,0,0-4.95-1.7H32V96H79.13a8,8,0,0,0,4.95-1.7L144,48.36ZM192,128a64,64,0,0,1-32.32,55.58,8,8,0,0,1-7.94-13.92A47.93,47.93,0,0,0,176,128a47.93,47.93,0,0,0-24.26-41.66,8,8,0,0,1,7.94-13.92A64,64,0,0,1,192,128Zm56,0a120.14,120.14,0,0,1-60.6,104.22,8,8,0,1,1-7.9-13.95A104.14,104.14,0,0,0,232,128a104.14,104.14,0,0,0-47.5-87.27,8,8,0,1,1,7.9-13.95A120.14,120.14,0,0,1,248,128Z"></path></svg>`;
+
+          qDisplay.onclick = playQuestionAudio;
+
+          optionsContainer.className = "grid grid-cols-2 gap-4 w-full";
+
+          optionsContainer.innerHTML = "";
+
+          let distractors = database.filter((item) => item.word !== q.word);
+
+          distractors = shuffle(distractors).slice(0, 3);
+
+          let options = shuffle([q, ...distractors]);
+
+          options.forEach((opt) => {
+            const btn = document.createElement("button");
+
+            btn.className =
+              "bg-white border-2 border-slate-200 hover:border-indigo-400 hover:bg-indigo-50 rounded-2xl p-3 flex items-center justify-center shadow-sm transition-all active:scale-95 h-36";
+
+            btn.dataset.word = opt.word;
+
+            btn.innerHTML = `<img src="${opt.img}" class="h-full w-full object-contain pointer-events-none drop-shadow-sm" alt="選項圖片">`;
+
+            btn.onclick = () => checkImageAnswer(opt.word, btn);
+
+            optionsContainer.appendChild(btn);
+          });
+
+          setTimeout(playQuestionAudio, 500);
+        } else {
+          qTitle.innerText = "這張圖是什麼？請點選麥克風說出來";
+
+          qDisplay.className =
+            "w-48 h-48 bg-white rounded-2xl flex items-center justify-center mb-8 shadow-inner border-4 border-amber-200 overflow-hidden p-3";
+
+          qDisplay.innerHTML = `<img src="${q.img}" class="h-full w-full object-contain" alt="題目圖片">`;
+
+          qDisplay.onclick = null;
+
+          optionsContainer.className =
+            "w-full flex flex-col items-center bg-slate-50 p-6 rounded-2xl border-2 border-slate-200";
+
+          optionsContainer.innerHTML = `
+
+<button id="q-mic-btn" onclick="startRecognition('word')" class="w-20 h-20 bg-indigo-500 rounded-full flex items-center justify-center text-white shadow-lg hover:bg-indigo-600 transition-all mb-4 mt-2">
+
+<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" fill="currentColor" viewBox="0 0 256 256"><path d="M128,176a48.05,48.05,0,0,0,48-48V64a48,48,0,0,0-96,0v64A48.05,48.05,0,0,0,128,176ZM96,64a32,32,0,0,1,64,0v64a32,32,0,0,1-64,0ZM216,128a8,8,0,0,1-16,0,72.08,72.08,0,0,1-144,0,8,8,0,0,1-16,0,88.1,88.1,0,0,0,80,87.66V240a8,8,0,0,0,16,0V215.66A88.1,88.1,0,0,0,216,128Z"></path></svg>
+
+</button>
+
+<p id="q-mic-status" class="text-sm font-medium text-slate-500">點擊麥克風說話</p>
+
+<p id="q-transcript" class="text-indigo-600 font-bold mt-2 min-h-[24px]"></p>
+
+<button onclick="skipWordQuestion()" class="mt-4 text-sm text-slate-400 underline hover:text-slate-600">麥克風無法使用？跳過這題</button>
+
+`;
+        }
+      }
+
+      function checkImageAnswer(selectedWord, btnElement) {
+        const allBtns = document.querySelectorAll("#options-container button");
+
+        allBtns.forEach((b) => (b.disabled = true));
+
+        if (selectedWord === currentCorrectAnswer.word) {
+          score += 10;
+
+          btnElement.classList.add("bg-emerald-50", "border-emerald-400");
+
+          setTimeout(() => showSentenceModal(), 800);
+        } else {
+          btnElement.classList.add("bg-red-50", "border-red-400");
+
+          allBtns.forEach((b) => {
+            if (b.dataset.word === currentCorrectAnswer.word) {
+              b.classList.add(
+                "bg-emerald-50",
+                "border-emerald-400",
+                "border-4",
+              );
+            }
+          });
+
+          setTimeout(nextQuestion, 1500);
+        }
+      }
+
+      function skipWordQuestion() {
+        showSentenceModal();
+      }
+
+      function showSentenceModal() {
+        stopPulseAnimation();
+
+        document.getElementById("modal-sentence-img").src =
+          currentCorrectAnswer.sentenceImg;
+
+        const word = currentCorrectAnswer.word;
+
+        const sentence = currentCorrectAnswer.sentence;
+
+        const highlightedSentence = sentence
+          .split(word)
+          .join(`<span class="highlight-word">${word}</span>`);
+
+        document.getElementById("modal-sentence").innerHTML =
+          highlightedSentence;
+
+        document.getElementById("modal-next-btn").classList.add("hidden");
+
+        const micBtn = document.getElementById("modal-mic-btn");
+
+        micBtn.classList.remove("hidden", "pulse-animation");
+
+        const micStatus = document.getElementById("modal-mic-status");
+
+        micStatus.innerText = "點擊麥克風，念出上方的句子";
+
+        micStatus.className = "text-sm font-medium text-slate-500";
+
+        document.getElementById("modal-transcript").innerText = "";
+
+        document.getElementById("modal-overlay").classList.remove("hidden");
+      }
+
+      function nextQuestion() {
+        window.speechSynthesis.cancel();
+
+        document.getElementById("modal-overlay").classList.add("hidden");
+
+        currentIndex++;
+
+        if (currentIndex < currentQuestions.length) {
+          loadQuestion();
+        } else {
+          showResult();
+        }
+      }
+
+      function showResult() {
+        document.getElementById("progress-bar").style.width = "100%";
+
+        document.getElementById("game-area").classList.add("hidden");
+
+        document.getElementById("result-screen").classList.remove("hidden");
+
+        document.getElementById("final-score").innerText = score;
+      }
+    </script>
+  </body>
+</html>
